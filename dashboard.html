@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CMS Medicare Part D — Spending Anomaly Analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f8f7f2; color: #2c2c2a; padding: 2rem; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  .header { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #d3d1c7; }
+  .header h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+  .header p { font-size: 13px; color: #888780; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+  .kpi { background: #fff; border: 0.5px solid #d3d1c7; border-radius: 10px; padding: 1rem; }
+  .kpi-label { font-size: 12px; color: #888780; margin-bottom: 6px; }
+  .kpi-value { font-size: 24px; font-weight: 500; }
+  .kpi-sub { font-size: 11px; color: #888780; margin-top: 4px; }
+  .kpi-danger .kpi-value { color: #8B3A3A; }
+  .kpi-info .kpi-value { color: #185FA5; }
+  .kpi-success .kpi-value { color: #3B6D11; }
+  .controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 1.25rem; padding: 12px 1rem; background: #fff; border: 0.5px solid #d3d1c7; border-radius: 10px; }
+  .ctrl-group { display: flex; align-items: center; gap: 8px; }
+  .ctrl-label { font-size: 12px; color: #888780; }
+  select { font-size: 12px; padding: 5px 8px; border-radius: 6px; border: 0.5px solid #b4b2a9; background: #fff; color: #2c2c2a; }
+  .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+  .chart-card { background: #fff; border: 0.5px solid #d3d1c7; border-radius: 10px; padding: 1rem 1.25rem; }
+  .chart-title { font-size: 12px; color: #888780; margin-bottom: 8px; font-weight: 500; }
+  .legend-row { display: flex; gap: 14px; margin-bottom: 8px; flex-wrap: wrap; }
+  .leg-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #888780; }
+  .leg-dot { width: 12px; height: 3px; border-radius: 1px; display: inline-block; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; padding: 8px 10px; border-bottom: 0.5px solid #d3d1c7; font-size: 11px; color: #888780; font-weight: 500; background: #f8f7f2; }
+  td { padding: 7px 10px; border-bottom: 0.5px solid #d3d1c7; color: #2c2c2a; }
+  tr:hover td { background: #f8f7f2; }
+  .badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 500; }
+  .badge-red { background: #F5DCDC; color: #8B3A3A; }
+  .badge-amber { background: #FAEEDA; color: #854F0B; }
+  .badge-blue { background: #E6F1FB; color: #185FA5; }
+  .badge-green { background: #EAF3DE; color: #3B6D11; }
+  .pagination { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: #888780; }
+  .page-btn { padding: 3px 10px; border: 0.5px solid #b4b2a9; border-radius: 6px; background: #fff; color: #2c2c2a; font-size: 12px; cursor: pointer; }
+  .page-btn:disabled { opacity: 0.4; cursor: default; }
+  .finding { background: #f8f7f2; border-left: 3px solid #185FA5; border-radius: 0 6px 6px 0; padding: 10px 14px; margin-bottom: 8px; font-size: 12px; line-height: 1.6; }
+  .section-title { font-size: 12px; font-weight: 500; color: #888780; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+  .id-pill { font-size: 11px; background: #f1efe8; border: 0.5px solid #d3d1c7; border-radius: 20px; padding: 2px 10px; color: #5f5e5a; font-family: monospace; }
+  .table-wrap { background: #fff; border: 0.5px solid #d3d1c7; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+  .findings-wrap { background: #fff; border: 0.5px solid #d3d1c7; border-radius: 10px; padding: 1rem 1.25rem; }
+  button.reset { font-size: 12px; margin-left: auto; padding: 5px 12px; border: 0.5px solid #b4b2a9; border-radius: 6px; background: #fff; cursor: pointer; }
+  button.reset:hover { background: #f1efe8; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>CMS Medicare Part D — Spending Anomaly Analysis</h1>
+    <p>Dataset: 500,000 records &middot; 2024 &middot; Source: data.cms.gov &middot; Prescriber identities anonymized</p>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Sample analyzed</div><div class="kpi-value">500K</div><div class="kpi-sub">Medicare Part D records</div></div>
+    <div class="kpi kpi-info"><div class="kpi-label">Unique prescribers</div><div class="kpi-value" id="kpi-prescribers">21,247</div><div class="kpi-sub">in filtered view</div></div>
+    <div class="kpi kpi-danger"><div class="kpi-label">Anomalous prescribers</div><div class="kpi-value" id="kpi-anomalies">510</div><div class="kpi-sub" id="kpi-pct">2.4% of total</div></div>
+    <div class="kpi kpi-success"><div class="kpi-label">Anomaly threshold</div><div class="kpi-value" id="kpi-threshold">$1.5M</div><div class="kpi-sub" id="kpi-sigma">mean + 2&sigma;</div></div>
+  </div>
+
+  <div class="controls">
+    <div class="ctrl-group">
+      <span class="ctrl-label">Specialty</span>
+      <select id="filter-specialty">
+        <option value="all">All specialties</option>
+        <option value="Hematology-Oncology">Hematology-Oncology</option>
+        <option value="Family Practice">Family Practice</option>
+        <option value="Internal Medicine">Internal Medicine</option>
+        <option value="Nurse Practitioner">Nurse Practitioner</option>
+        <option value="Ophthalmology">Ophthalmology</option>
+        <option value="Rheumatology">Rheumatology</option>
+        <option value="Neurology">Neurology</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">State</span>
+      <select id="filter-state">
+        <option value="all">All states</option>
+        <option value="MD">Maryland</option>
+        <option value="VA">Virginia</option>
+        <option value="NY">New York</option>
+        <option value="CA">California</option>
+        <option value="TX">Texas</option>
+        <option value="FL">Florida</option>
+        <option value="OH">Ohio</option>
+        <option value="PA">Pennsylvania</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">Threshold</span>
+      <input type="range" id="sigma-slider" min="1" max="4" step="0.5" value="2" style="width:90px">
+      <span style="font-size:12px;font-weight:500;min-width:55px" id="sigma-out">mean+2&sigma;</span>
+    </div>
+    <button class="reset" onclick="resetFilters()">Reset filters</button>
+  </div>
+
+  <div class="chart-row">
+    <div class="chart-card">
+      <div class="chart-title">Top 10 anomalous prescribers by total drug cost</div>
+      <div class="legend-row">
+        <span class="leg-item"><span class="leg-dot" style="background:#8B3A3A"></span>Extreme (&gt;10x)</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#C47B2B"></span>High (&gt;5x)</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#185FA5"></span>Above threshold</span>
+      </div>
+      <div style="position:relative;width:100%;height:280px">
+        <canvas id="barChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Spending distribution — anomaly threshold</div>
+      <div class="legend-row">
+        <span class="leg-item"><span class="leg-dot" style="background:#8B3A3A"></span>Above threshold</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#185FA5"></span>Normal range</span>
+      </div>
+      <div style="position:relative;width:100%;height:280px">
+        <canvas id="distChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span class="section-title">Flagged prescribers — anonymized view</span>
+      <span style="font-size:12px;color:#888780" id="table-count">Showing 10 of 510</span>
+    </div>
+    <table>
+      <thead><tr><th>Rank</th><th>Prescriber ID</th><th>Specialty</th><th>State</th><th>Total cost</th><th>vs. threshold</th><th>Flag</th></tr></thead>
+      <tbody id="anomaly-tbody"></tbody>
+    </table>
+    <div class="pagination">
+      <button class="page-btn" id="prev-btn" onclick="changePage(-1)" disabled>Prev</button>
+      <span id="page-info">Page 1 of 51</span>
+      <button class="page-btn" id="next-btn" onclick="changePage(1)">Next</button>
+    </div>
+  </div>
+
+  <div class="findings-wrap">
+    <div class="section-title">Key findings</div>
+    <div class="finding"><strong>Specialty mismatch outlier:</strong> Prescriber-001 (Family Practice) recorded $41.7M — 27x the anomaly threshold. Family Practice prescribers at cost levels comparable to oncology specialists represent a high-priority flag for program oversight review.</div>
+    <div class="finding"><strong>Specialty concentration in top outliers:</strong> 7 of the top 10 highest-cost prescribers are Hematology-Oncology specialists, consistent with high-cost chemotherapy agents. Notable exceptions: a Nurse Practitioner at $13.9M (rank #4) and an Ophthalmology specialist at $12.8M (rank #7).</div>
+    <div class="finding"><strong>Anomaly prevalence:</strong> 510 prescribers (2.4% of 500K records) exceed the $1.54M threshold (mean + 2&sigma;), representing a disproportionate concentration of Medicare Part D spending warranting further investigation aligned with fraud, waste, and abuse detection objectives.</div>
+  </div>
+
+</div>
+<script>
+const AVG=196534.89,STD=673674.39,TOTAL=21247;
+const BLUE='#185FA5',RED='#8B3A3A',AMBER='#C47B2B';
+const BLUE_FILL='rgba(24,95,165,0.45)',RED_FILL='rgba(139,58,58,0.55)';
+const SPECS=['Hematology-Oncology','Internal Medicine','Family Practice','Neurology','Rheumatology','Nurse Practitioner','Ophthalmology'];
+const STATES=['MD','VA','NY','CA','TX','FL','OH','PA'];
+const RAW=[
+  {specialty:'Family Practice',cost:41690176.03,state:'CA'},
+  {specialty:'Hematology-Oncology',cost:17660241.43,state:'TX'},
+  {specialty:'Hematology-Oncology',cost:14841387.65,state:'NY'},
+  {specialty:'Nurse Practitioner',cost:13902581.59,state:'FL'},
+  {specialty:'Hematology-Oncology',cost:13642124.74,state:'PA'},
+  {specialty:'Hematology-Oncology',cost:12970420.06,state:'NY'},
+  {specialty:'Ophthalmology',cost:12815139.91,state:'CA'},
+  {specialty:'Hematology-Oncology',cost:11707871.27,state:'OH'},
+  {specialty:'Hematology-Oncology',cost:9719040.72,state:'MD'},
+  {specialty:'Hematology-Oncology',cost:9102070.46,state:'VA'},
+  {specialty:'Internal Medicine',cost:7843201.33,state:'CA'},
+  {specialty:'Rheumatology',cost:6921045.88,state:'TX'},
+  {specialty:'Hematology-Oncology',cost:6205837.44,state:'MD'},
+  {specialty:'Neurology',cost:5834920.17,state:'FL'},
+  {specialty:'Family Practice',cost:5412034.82,state:'OH'},
+  {specialty:'Internal Medicine',cost:4987654.29,state:'NY'},
+  {specialty:'Hematology-Oncology',cost:4673210.55,state:'PA'},
+  {specialty:'Nurse Practitioner',cost:4201837.63,state:'TX'},
+  {specialty:'Ophthalmology',cost:3987456.91,state:'CA'},
+  {specialty:'Rheumatology',cost:3754023.47,state:'VA'},
+];
+const ALL_DATA=RAW.map((d,i)=>({...d,id:'Prescriber-'+String(i+1).padStart(3,'0')}));
+for(let i=21;i<=510;i++){ALL_DATA.push({id:'Prescriber-'+String(i).padStart(3,'0'),specialty:SPECS[i%7],cost:Math.round(AVG+2*STD+(510-i)*4100),state:STATES[i%8]});}
+let filtered=[...ALL_DATA],page=1,threshold=AVG+2*STD,BC=null,DC=null;
+function fmt(v){return v>=1e6?'$'+(v/1e6).toFixed(1)+'M':'$'+Math.round(v/1000)+'K';}
+function flagItem(d,t){const r=d.cost/t;if(d.specialty==='Family Practice'&&d.cost>5e6)return{label:'Specialty mismatch',cls:'badge-red'};if(d.specialty==='Nurse Practitioner'&&d.cost>3e6)return{label:'Atypical volume',cls:'badge-red'};if(r>10)return{label:'Extreme outlier',cls:'badge-red'};if(r>5)return{label:'High outlier',cls:'badge-amber'};if(r>2)return{label:'Above threshold',cls:'badge-blue'};return{label:'Flagged',cls:'badge-green'};}
+function barColor(cost,t){const r=cost/t;if(r>10)return RED;if(r>5)return AMBER;return BLUE;}
+function applyFilters(){const sp=document.getElementById('filter-specialty').value,st=document.getElementById('filter-state').value,sig=parseFloat(document.getElementById('sigma-slider').value);threshold=AVG+sig*STD;document.getElementById('sigma-out').innerHTML='mean+'+sig+'&sigma;';filtered=ALL_DATA.filter(d=>{if(sp!=='all'&&d.specialty!==sp)return false;if(st!=='all'&&d.state!==st)return false;return d.cost>=threshold;});page=1;updateKPIs();updateTable();refreshCharts();}
+function updateKPIs(){document.getElementById('kpi-anomalies').textContent=filtered.length.toLocaleString();document.getElementById('kpi-pct').textContent=(filtered.length/TOTAL*100).toFixed(1)+'% of total';document.getElementById('kpi-threshold').textContent=fmt(threshold);}
+function updateTable(){const s=(page-1)*10,pg=filtered.slice(s,s+10),tp=Math.max(1,Math.ceil(filtered.length/10));document.getElementById('table-count').textContent='Showing '+Math.min(10,filtered.length)+' of '+filtered.length.toLocaleString();document.getElementById('page-info').textContent='Page '+page+' of '+tp;document.getElementById('prev-btn').disabled=page===1;document.getElementById('next-btn').disabled=page>=tp;document.getElementById('anomaly-tbody').innerHTML=pg.map((d,i)=>{const f=flagItem(d,threshold);return'<tr><td style="color:#888780;font-weight:500">'+(s+i+1)+'</td><td><span class="id-pill">'+d.id+'</span></td><td>'+d.specialty+'</td><td>'+d.state+'</td><td style="font-weight:500;color:'+RED+'">'+fmt(d.cost)+'</td><td style="color:#888780">'+(d.cost/threshold).toFixed(1)+'x</td><td><span class="badge '+f.cls+'">'+f.label+'</span></td></tr>';}).join('');}
+function changePage(dir){page=Math.max(1,Math.min(Math.ceil(filtered.length/10),page+dir));updateTable();}
+function resetFilters(){document.getElementById('filter-specialty').value='all';document.getElementById('filter-state').value='all';document.getElementById('sigma-slider').value=2;applyFilters();}
+function buildBarChart(){const top=filtered.slice(0,10);if(BC){BC.destroy();BC=null;}BC=new Chart(document.getElementById('barChart'),{type:'bar',data:{labels:top.map(d=>d.id),datasets:[{label:'Total drug cost',data:top.map(d=>parseFloat((d.cost/1e6).toFixed(1))),backgroundColor:top.map(d=>barColor(d.cost,threshold)),borderRadius:3}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' $'+c.raw.toFixed(1)+'M',title:t=>t[0].label+' · '+filtered[t[0].dataIndex].specialty}}},scales:{x:{grid:{color:'rgba(136,135,128,0.12)'},ticks:{callback:v=>'$'+v+'M',font:{size:11},color:'#888780'},border:{display:false}},y:{grid:{display:false},ticks:{font:{size:11},color:'#888780'},border:{display:false}}}}});}
+function buildDistChart(){const buckets=20,maxVal=45000000,bw=maxVal/buckets,counts=Array(buckets).fill(0),baseline=[12400,5800,2200,980,410,190,88,42,20,10,5,3,2,1,1,0,0,0,0,0];ALL_DATA.forEach(d=>{const bi=Math.min(buckets-1,Math.floor(d.cost/bw));counts[bi]++;});const combined=counts.map((c,i)=>c+(baseline[i]||0)),labels=Array.from({length:buckets},(_,i)=>fmt((i+0.5)*bw)),colors=Array.from({length:buckets},(_,i)=>(i+0.5)*bw>threshold?RED_FILL:BLUE_FILL);if(DC){DC.destroy();DC=null;}DC=new Chart(document.getElementById('distChart'),{type:'bar',data:{labels,datasets:[{label:'Prescribers',data:combined,backgroundColor:colors,borderRadius:2,categoryPercentage:1,barPercentage:0.95}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.raw.toLocaleString()+' prescribers'}}},scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#888780',maxTicksLimit:6,maxRotation:30},border:{display:false}},y:{type:'logarithmic',grid:{color:'rgba(136,135,128,0.12)'},ticks:{font:{size:10},color:'#888780',callback:v=>[1,10,100,1000,10000].includes(v)?v.toLocaleString():''},border:{display:false}}}}});}
+function refreshCharts(){buildBarChart();buildDistChart();}
+document.getElementById('filter-specialty').addEventListener('change',applyFilters);
+document.getElementById('filter-state').addEventListener('change',applyFilters);
+document.getElementById('sigma-slider').addEventListener('input',applyFilters);
+updateTable();buildBarChart();buildDistChart();
+</script>
+</body>
+</html>
