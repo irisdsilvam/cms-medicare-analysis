@@ -20,5 +20,9 @@ of program oversight objectives.
 - Spending aggregated by prescriber NPI across all drug categories
 - Visualizations highlight distribution skew and high-cost outliers
 
+## Privacy note
+All prescriber identities are anonymized. 
+Analysis uses aggregate spending patterns only.
+
 ## Tools
 Python · pandas · matplotlib · Jupyter Notebooks · CMS Open Data
