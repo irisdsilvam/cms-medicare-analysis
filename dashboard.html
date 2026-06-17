@@ -63,7 +63,7 @@
     <div class="kpi"><div class="kpi-label">Sample analyzed</div><div class="kpi-value">500K</div><div class="kpi-sub">Medicare Part D records</div></div>
     <div class="kpi kpi-info"><div class="kpi-label">Unique prescribers</div><div class="kpi-value" id="kpi-prescribers">21,247</div><div class="kpi-sub">in filtered view</div></div>
     <div class="kpi kpi-danger"><div class="kpi-label">Anomalous prescribers</div><div class="kpi-value" id="kpi-anomalies">510</div><div class="kpi-sub" id="kpi-pct">2.4% of total</div></div>
-    <div class="kpi kpi-success"><div class="kpi-label">Anomaly threshold</div><div class="kpi-value" id="kpi-threshold">$1.5M</div><div class="kpi-sub" id="kpi-sigma">mean + 2&sigma;</div></div>
+    <div class="kpi kpi-success"><div class="kpi-label">Anomaly threshold</div><div class="kpi-value" id="kpi-threshold">$1.5M</div><div class="kpi-sub">mean + 2&sigma;</div></div>
   </div>
 
   <div class="controls">
@@ -115,7 +115,7 @@
       </div>
     </div>
     <div class="chart-card">
-      <div class="chart-title">Spending distribution — anomaly threshold</div>
+      <div class="chart-title" id="dist-title">Spending distribution — all prescribers</div>
       <div class="legend-row">
         <span class="leg-item"><span class="leg-dot" style="background:#8B3A3A"></span>Above threshold</span>
         <span class="leg-item"><span class="leg-dot" style="background:#185FA5"></span>Normal range</span>
@@ -156,6 +156,7 @@ const BLUE='#185FA5',RED='#8B3A3A',AMBER='#C47B2B';
 const BLUE_FILL='rgba(24,95,165,0.45)',RED_FILL='rgba(139,58,58,0.55)';
 const SPECS=['Hematology-Oncology','Internal Medicine','Family Practice','Neurology','Rheumatology','Nurse Practitioner','Ophthalmology'];
 const STATES=['MD','VA','NY','CA','TX','FL','OH','PA'];
+
 const RAW=[
   {specialty:'Family Practice',cost:41690176.03,state:'CA'},
   {specialty:'Hematology-Oncology',cost:17660241.43,state:'TX'},
@@ -178,24 +179,142 @@ const RAW=[
   {specialty:'Ophthalmology',cost:3987456.91,state:'CA'},
   {specialty:'Rheumatology',cost:3754023.47,state:'VA'},
 ];
+
 const ALL_DATA=RAW.map((d,i)=>({...d,id:'Prescriber-'+String(i+1).padStart(3,'0')}));
 for(let i=21;i<=510;i++){ALL_DATA.push({id:'Prescriber-'+String(i).padStart(3,'0'),specialty:SPECS[i%7],cost:Math.round(AVG+2*STD+(510-i)*4100),state:STATES[i%8]});}
+
 let filtered=[...ALL_DATA],page=1,threshold=AVG+2*STD,BC=null,DC=null;
+
 function fmt(v){return v>=1e6?'$'+(v/1e6).toFixed(1)+'M':'$'+Math.round(v/1000)+'K';}
-function flagItem(d,t){const r=d.cost/t;if(d.specialty==='Family Practice'&&d.cost>5e6)return{label:'Specialty mismatch',cls:'badge-red'};if(d.specialty==='Nurse Practitioner'&&d.cost>3e6)return{label:'Atypical volume',cls:'badge-red'};if(r>10)return{label:'Extreme outlier',cls:'badge-red'};if(r>5)return{label:'High outlier',cls:'badge-amber'};if(r>2)return{label:'Above threshold',cls:'badge-blue'};return{label:'Flagged',cls:'badge-green'};}
-function barColor(cost,t){const r=cost/t;if(r>10)return RED;if(r>5)return AMBER;return BLUE;}
-function applyFilters(){const sp=document.getElementById('filter-specialty').value,st=document.getElementById('filter-state').value,sig=parseFloat(document.getElementById('sigma-slider').value);threshold=AVG+sig*STD;document.getElementById('sigma-out').innerHTML='mean+'+sig+'&sigma;';filtered=ALL_DATA.filter(d=>{if(sp!=='all'&&d.specialty!==sp)return false;if(st!=='all'&&d.state!==st)return false;return d.cost>=threshold;});page=1;updateKPIs();updateTable();refreshCharts();}
-function updateKPIs(){document.getElementById('kpi-anomalies').textContent=filtered.length.toLocaleString();document.getElementById('kpi-pct').textContent=(filtered.length/TOTAL*100).toFixed(1)+'% of total';document.getElementById('kpi-threshold').textContent=fmt(threshold);}
-function updateTable(){const s=(page-1)*10,pg=filtered.slice(s,s+10),tp=Math.max(1,Math.ceil(filtered.length/10));document.getElementById('table-count').textContent='Showing '+Math.min(10,filtered.length)+' of '+filtered.length.toLocaleString();document.getElementById('page-info').textContent='Page '+page+' of '+tp;document.getElementById('prev-btn').disabled=page===1;document.getElementById('next-btn').disabled=page>=tp;document.getElementById('anomaly-tbody').innerHTML=pg.map((d,i)=>{const f=flagItem(d,threshold);return'<tr><td style="color:#888780;font-weight:500">'+(s+i+1)+'</td><td><span class="id-pill">'+d.id+'</span></td><td>'+d.specialty+'</td><td>'+d.state+'</td><td style="font-weight:500;color:'+RED+'">'+fmt(d.cost)+'</td><td style="color:#888780">'+(d.cost/threshold).toFixed(1)+'x</td><td><span class="badge '+f.cls+'">'+f.label+'</span></td></tr>';}).join('');}
-function changePage(dir){page=Math.max(1,Math.min(Math.ceil(filtered.length/10),page+dir));updateTable();}
-function resetFilters(){document.getElementById('filter-specialty').value='all';document.getElementById('filter-state').value='all';document.getElementById('sigma-slider').value=2;applyFilters();}
-function buildBarChart(){const top=filtered.slice(0,10);if(BC){BC.destroy();BC=null;}BC=new Chart(document.getElementById('barChart'),{type:'bar',data:{labels:top.map(d=>d.id),datasets:[{label:'Total drug cost',data:top.map(d=>parseFloat((d.cost/1e6).toFixed(1))),backgroundColor:top.map(d=>barColor(d.cost,threshold)),borderRadius:3}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' $'+c.raw.toFixed(1)+'M',title:t=>t[0].label+' · '+filtered[t[0].dataIndex].specialty}}},scales:{x:{grid:{color:'rgba(136,135,128,0.12)'},ticks:{callback:v=>'$'+v+'M',font:{size:11},color:'#888780'},border:{display:false}},y:{grid:{display:false},ticks:{font:{size:11},color:'#888780'},border:{display:false}}}}});}
-function buildDistChart(){const buckets=20,maxVal=45000000,bw=maxVal/buckets,counts=Array(buckets).fill(0),baseline=[12400,5800,2200,980,410,190,88,42,20,10,5,3,2,1,1,0,0,0,0,0];ALL_DATA.forEach(d=>{const bi=Math.min(buckets-1,Math.floor(d.cost/bw));counts[bi]++;});const combined=counts.map((c,i)=>c+(baseline[i]||0)),labels=Array.from({length:buckets},(_,i)=>fmt((i+0.5)*bw)),colors=Array.from({length:buckets},(_,i)=>(i+0.5)*bw>threshold?RED_FILL:BLUE_FILL);if(DC){DC.destroy();DC=null;}DC=new Chart(document.getElementById('distChart'),{type:'bar',data:{labels,datasets:[{label:'Prescribers',data:combined,backgroundColor:colors,borderRadius:2,categoryPercentage:1,barPercentage:0.95}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.raw.toLocaleString()+' prescribers'}}},scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#888780',maxTicksLimit:6,maxRotation:30},border:{display:false}},y:{type:'logarithmic',grid:{color:'rgba(136,135,128,0.12)'},ticks:{font:{size:10},color:'#888780',callback:v=>[1,10,100,1000,10000].includes(v)?v.toLocaleString():''},border:{display:false}}}}});}
-function refreshCharts(){buildBarChart();buildDistChart();}
+
+function flagItem(d,t){
+  const r=d.cost/t;
+  if(d.specialty==='Family Practice'&&d.cost>5e6)return{label:'Specialty mismatch',cls:'badge-red'};
+  if(d.specialty==='Nurse Practitioner'&&d.cost>3e6)return{label:'Atypical volume',cls:'badge-red'};
+  if(r>10)return{label:'Extreme outlier',cls:'badge-red'};
+  if(r>5)return{label:'High outlier',cls:'badge-amber'};
+  if(r>2)return{label:'Above threshold',cls:'badge-blue'};
+  return{label:'Flagged',cls:'badge-green'};
+}
+
+function barColor(cost,t){
+  const r=cost/t;
+  if(r>10)return RED;
+  if(r>5)return AMBER;
+  return BLUE;
+}
+
+function getFilteredPool(){
+  const sp=document.getElementById('filter-specialty').value;
+  const st=document.getElementById('filter-state').value;
+  return ALL_DATA.filter(d=>{
+    if(sp!=='all'&&d.specialty!==sp)return false;
+    if(st!=='all'&&d.state!==st)return false;
+    return true;
+  });
+}
+
+function applyFilters(){
+  const sig=parseFloat(document.getElementById('sigma-slider').value);
+  threshold=AVG+sig*STD;
+  document.getElementById('sigma-out').innerHTML='mean+'+sig+'&sigma;';
+  const pool=getFilteredPool();
+  filtered=pool.filter(d=>d.cost>=threshold);
+  page=1;
+  updateKPIs(pool);
+  updateTable();
+  refreshCharts(pool);
+}
+
+function updateKPIs(pool){
+  const poolSize=pool?pool.length:TOTAL;
+  document.getElementById('kpi-prescribers').textContent=poolSize.toLocaleString();
+  document.getElementById('kpi-anomalies').textContent=filtered.length.toLocaleString();
+  const poolSize2=pool?pool.length:TOTAL; const pctVal=poolSize2>0?(filtered.length/poolSize2*100).toFixed(1):0; document.getElementById('kpi-pct').textContent=pctVal+'% of filtered';
+  document.getElementById('kpi-threshold').textContent=fmt(threshold);
+}
+
+function updateTable(){
+  const s=(page-1)*10,pg=filtered.slice(s,s+10),tp=Math.max(1,Math.ceil(filtered.length/10));
+  document.getElementById('table-count').textContent='Showing '+Math.min(10,filtered.length)+' of '+filtered.length.toLocaleString();
+  document.getElementById('page-info').textContent='Page '+page+' of '+tp;
+  document.getElementById('prev-btn').disabled=page===1;
+  document.getElementById('next-btn').disabled=page>=tp;
+  document.getElementById('anomaly-tbody').innerHTML=pg.map((d,i)=>{
+    const f=flagItem(d,threshold);
+    return'<tr><td style="color:#888780;font-weight:500">'+(s+i+1)+'</td><td><span class="id-pill">'+d.id+'</span></td><td>'+d.specialty+'</td><td>'+d.state+'</td><td style="font-weight:500;color:'+RED+'">'+fmt(d.cost)+'</td><td style="color:#888780">'+(d.cost/threshold).toFixed(1)+'x</td><td><span class="badge '+f.cls+'">'+f.label+'</span></td></tr>';
+  }).join('');
+}
+
+function changePage(dir){
+  page=Math.max(1,Math.min(Math.ceil(filtered.length/10),page+dir));
+  updateTable();
+}
+
+function resetFilters(){
+  document.getElementById('filter-specialty').value='all';
+  document.getElementById('filter-state').value='all';
+  document.getElementById('sigma-slider').value=2;
+  applyFilters();
+}
+
+function buildBarChart(){
+  const top=filtered.slice(0,10);
+  if(BC){BC.destroy();BC=null;}
+  if(top.length===0)return;
+  BC=new Chart(document.getElementById('barChart'),{
+    type:'bar',
+    data:{
+      labels:top.map(d=>d.id),
+      datasets:[{label:'Total drug cost',data:top.map(d=>parseFloat((d.cost/1e6).toFixed(1))),backgroundColor:top.map(d=>barColor(d.cost,threshold)),borderRadius:3}]
+    },
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' $'+c.raw.toFixed(1)+'M',title:t=>t[0].label+' · '+filtered[t[0].dataIndex].specialty}}},
+      scales:{
+        x:{grid:{color:'rgba(136,135,128,0.12)'},ticks:{callback:v=>'$'+v+'M',font:{size:11},color:'#888780'},border:{display:false}},
+        y:{grid:{display:false},ticks:{font:{size:11},color:'#888780'},border:{display:false}}
+      }
+    }
+  });
+}
+
+function buildDistChart(pool){
+  const data=pool||ALL_DATA;
+  const sp=document.getElementById('filter-specialty').value;
+  const st=document.getElementById('filter-state').value;
+  const label=sp!=='all'?sp:(st!=='all'?st:'all prescribers');
+  const spVal=document.getElementById('filter-specialty').value; const stVal=document.getElementById('filter-state').value; const distLabel=spVal!=='all'?spVal:(stVal!=='all'?stVal:'all prescribers'); document.getElementById('dist-title').textContent='Spending distribution — '+distLabel;
+
+  const buckets=20,maxVal=45000000,bw=maxVal/buckets;
+  const counts=Array(buckets).fill(0);
+  data.forEach(d=>{const bi=Math.min(buckets-1,Math.floor(d.cost/bw));counts[bi]++;});
+
+  const labels=Array.from({length:buckets},(_,i)=>fmt((i+0.5)*bw));
+  const colors=Array.from({length:buckets},(_,i)=>(i+0.5)*bw>threshold?RED_FILL:BLUE_FILL);
+
+  if(DC){DC.destroy();DC=null;}
+  DC=new Chart(document.getElementById('distChart'),{
+    type:'bar',
+    data:{labels,datasets:[{label:'Prescribers',data:counts,backgroundColor:colors,borderRadius:2,categoryPercentage:1,barPercentage:0.95}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.raw.toLocaleString()+' prescribers'}}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:10},color:'#888780',maxTicksLimit:6,maxRotation:30},border:{display:false}},
+        y:{type:'logarithmic',grid:{color:'rgba(136,135,128,0.12)'},ticks:{font:{size:10},color:'#888780',callback:v=>[1,10,100,1000,10000].includes(v)?v.toLocaleString():''},border:{display:false}}
+      }
+    }
+  });
+}
+
+function refreshCharts(pool){buildBarChart();buildDistChart(pool);}
+
 document.getElementById('filter-specialty').addEventListener('change',applyFilters);
 document.getElementById('filter-state').addEventListener('change',applyFilters);
 document.getElementById('sigma-slider').addEventListener('input',applyFilters);
-updateTable();buildBarChart();buildDistChart();
+
+applyFilters();
 </script>
 </body>
 </html>
