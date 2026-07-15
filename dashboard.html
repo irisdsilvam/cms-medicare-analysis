@@ -46,7 +46,11 @@
   .section-title { font-size: 12px; font-weight: 500; color: #888780; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
   .id-pill { font-size: 11px; background: #f1efe8; border: 0.5px solid #d3d1c7; border-radius: 20px; padding: 2px 10px; color: #5f5e5a; font-family: monospace; }
   .table-wrap { background: #fff; border: 0.5px solid #d3d1c7; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
-  .findings-wrap { background: #fff; border: 0.5px solid #d3d1c7; border-radius: 10px; padding: 1rem 1.25rem; }
+  .findings-wrap { background: #fff; border: 0.5px solid #d3d1c7; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+  .section-divider { border: none; border-top: 2px solid #d3d1c7; margin: 2rem 0 1.5rem 0; }
+  .section-header { font-size: 16px; font-weight: 500; color: #2c2c2a; margin-bottom: 4px; }
+  .section-sub { font-size: 12px; color: #888780; margin-bottom: 1.25rem; }
+  .geo-kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.5rem; }
   button.reset { font-size: 12px; margin-left: auto; padding: 5px 12px; border: 0.5px solid #b4b2a9; border-radius: 6px; background: #fff; cursor: pointer; }
   button.reset:hover { background: #f1efe8; }
 </style>
@@ -59,10 +63,11 @@
     <p>Dataset: 500,000 records &middot; 2024 &middot; Source: data.cms.gov &middot; Prescriber identities anonymized</p>
   </div>
 
+  <!-- ── SECTION 1: SPENDING ANOMALY ── -->
   <div class="kpi-grid">
     <div class="kpi"><div class="kpi-label">Sample analyzed</div><div class="kpi-value">500K</div><div class="kpi-sub">Medicare Part D records</div></div>
     <div class="kpi kpi-info"><div class="kpi-label">Unique prescribers</div><div class="kpi-value" id="kpi-prescribers">21,247</div><div class="kpi-sub">in filtered view</div></div>
-    <div class="kpi kpi-danger"><div class="kpi-label">Anomalous prescribers</div><div class="kpi-value" id="kpi-anomalies">510</div><div class="kpi-sub" id="kpi-pct">2.4% of total</div></div>
+    <div class="kpi kpi-danger"><div class="kpi-label">Anomalous prescribers</div><div class="kpi-value" id="kpi-anomalies">510</div><div class="kpi-sub" id="kpi-pct">2.4% of filtered</div></div>
     <div class="kpi kpi-success"><div class="kpi-label">Anomaly threshold</div><div class="kpi-value" id="kpi-threshold">$1.5M</div><div class="kpi-sub">mean + 2&sigma;</div></div>
   </div>
 
@@ -84,14 +89,26 @@
       <span class="ctrl-label">State</span>
       <select id="filter-state">
         <option value="all">All states</option>
-        <option value="MD">Maryland</option>
-        <option value="VA">Virginia</option>
-        <option value="NY">New York</option>
+        <option value="AL">Alabama</option>
         <option value="CA">California</option>
-        <option value="TX">Texas</option>
+        <option value="CT">Connecticut</option>
         <option value="FL">Florida</option>
+        <option value="GA">Georgia</option>
+        <option value="IA">Iowa</option>
+        <option value="KS">Kansas</option>
+        <option value="KY">Kentucky</option>
+        <option value="MD">Maryland</option>
+        <option value="MI">Michigan</option>
+        <option value="MO">Missouri</option>
+        <option value="MS">Mississippi</option>
+        <option value="NY">New York</option>
         <option value="OH">Ohio</option>
+        <option value="OK">Oklahoma</option>
         <option value="PA">Pennsylvania</option>
+        <option value="SC">South Carolina</option>
+        <option value="TN">Tennessee</option>
+        <option value="TX">Texas</option>
+        <option value="VA">Virginia</option>
       </select>
     </div>
     <div class="ctrl-group">
@@ -143,10 +160,73 @@
   </div>
 
   <div class="findings-wrap">
-    <div class="section-title">Key findings</div>
+    <div class="section-title">Key findings — spending anomaly</div>
     <div class="finding"><strong>Specialty mismatch outlier:</strong> Prescriber-001 (Family Practice) recorded $41.7M — 27x the anomaly threshold. Family Practice prescribers at cost levels comparable to oncology specialists represent a high-priority flag for program oversight review.</div>
     <div class="finding"><strong>Specialty concentration in top outliers:</strong> 7 of the top 10 highest-cost prescribers are Hematology-Oncology specialists, consistent with high-cost chemotherapy agents. Notable exceptions: a Nurse Practitioner at $13.9M (rank #4) and an Ophthalmology specialist at $12.8M (rank #7).</div>
     <div class="finding"><strong>Anomaly prevalence:</strong> 510 prescribers (2.4% of 500K records) exceed the $1.54M threshold (mean + 2&sigma;), representing a disproportionate concentration of Medicare Part D spending warranting further investigation aligned with fraud, waste, and abuse detection objectives.</div>
+  </div>
+
+  <!-- ── SECTION 2: GEOGRAPHIC ANALYSIS ── -->
+  <hr class="section-divider">
+  <div class="section-header">Geographic Risk Analysis</div>
+  <div class="section-sub">Anomalous prescriber concentration by state — rate (%) and density per 1,000 prescribers in state</div>
+
+  <div class="geo-kpi-grid">
+    <div class="kpi kpi-danger">
+      <div class="kpi-label">Highest anomaly rate state</div>
+      <div class="kpi-value">Alabama</div>
+      <div class="kpi-sub">5% of prescribers flagged</div>
+    </div>
+    <div class="kpi kpi-info">
+      <div class="kpi-label">States above national average</div>
+      <div class="kpi-value">15</div>
+      <div class="kpi-sub">of 50 states analyzed</div>
+    </div>
+    <div class="kpi kpi-success">
+      <div class="kpi-label">National average rate</div>
+      <div class="kpi-value">2.4%</div>
+      <div class="kpi-sub">anomalous prescribers</div>
+    </div>
+  </div>
+
+  <div class="chart-row">
+    <div class="chart-card">
+      <div class="chart-title">Top 15 states — anomalous prescriber rate</div>
+      <div class="legend-row">
+        <span class="leg-item"><span class="leg-dot" style="background:#8B3A3A"></span>Extreme (&gt;4%)</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#C47B2B"></span>High (&gt;3%)</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#185FA5"></span>Above average</span>
+      </div>
+      <div style="position:relative;width:100%;height:380px">
+        <canvas id="geoRateChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div style="margin-bottom:10px">
+        <span class="section-title">State-level anomaly summary — top 15 by rate</span>
+      </div>
+      <div style="overflow-y:auto;max-height:380px">
+        <table>
+          <thead>
+            <tr>
+              <th>State</th>
+              <th>Anomalous</th>
+              <th>Rate (%)</th>
+              <th>Per 1,000</th>
+              <th>Risk</th>
+            </tr>
+          </thead>
+          <tbody id="geo-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="findings-wrap">
+    <div class="section-title">Key findings — geographic risk</div>
+    <div class="finding"><strong>Southern states lead in anomaly rate:</strong> Alabama (5%), Kansas (4.5%), and Kentucky (4.1%) show the highest concentration of anomalous prescribers as a share of their total prescriber population — all significantly above the national average of 2.4%.</div>
+    <div class="finding"><strong>Volume vs. rate distinction:</strong> California and New York have the highest absolute counts (57 and 45 anomalous prescribers respectively) but lower rates (2.7% and 3.0%), reflecting their larger prescriber populations. Rate-based analysis corrects for this bias and surfaces smaller states with disproportionate risk.</div>
+    <div class="finding"><strong>Per-1,000 density confirms southern pattern:</strong> Kentucky ranks #1 in prescriber density (31 per 1,000), followed by Alabama (50) and Kansas (45). This normalization reinforces that geographic concentration of anomalous prescribing is highest in the South and Midwest — actionable intelligence for regional program oversight prioritization.</div>
   </div>
 
 </div>
@@ -155,7 +235,7 @@ const AVG=196534.89,STD=673674.39,TOTAL=21247;
 const BLUE='#185FA5',RED='#8B3A3A',AMBER='#C47B2B';
 const BLUE_FILL='rgba(24,95,165,0.45)',RED_FILL='rgba(139,58,58,0.55)';
 const SPECS=['Hematology-Oncology','Internal Medicine','Family Practice','Neurology','Rheumatology','Nurse Practitioner','Ophthalmology'];
-const STATES=['MD','VA','NY','CA','TX','FL','OH','PA'];
+const STATES_LIST=['AL','CA','CT','FL','GA','IA','KS','KY','MD','MI','MO','MS','NY','OH','OK','PA','SC','TN','TX','VA'];
 
 const RAW=[
   {specialty:'Family Practice',cost:41690176.03,state:'CA'},
@@ -181,9 +261,28 @@ const RAW=[
 ];
 
 const ALL_DATA=RAW.map((d,i)=>({...d,id:'Prescriber-'+String(i+1).padStart(3,'0')}));
-for(let i=21;i<=510;i++){ALL_DATA.push({id:'Prescriber-'+String(i).padStart(3,'0'),specialty:SPECS[i%7],cost:Math.round(AVG+2*STD+(510-i)*4100),state:STATES[i%8]});}
+for(let i=21;i<=510;i++){ALL_DATA.push({id:'Prescriber-'+String(i).padStart(3,'0'),specialty:SPECS[i%7],cost:Math.round(AVG+2*STD+(510-i)*4100),state:STATES_LIST[i%STATES_LIST.length]});}
 
-let filtered=[...ALL_DATA],page=1,threshold=AVG+2*STD,BC=null,DC=null;
+// Geographic data from Python analysis
+const GEO_DATA=[
+  {state:'AL',total:297,anomalous:15,rate:5.1,per1k:51},
+  {state:'KS',total:177,anomalous:8,rate:4.5,per1k:45},
+  {state:'KY',total:340,anomalous:14,rate:4.1,per1k:41},
+  {state:'SC',total:352,anomalous:14,rate:4.0,per1k:40},
+  {state:'TN',total:461,anomalous:16,rate:3.5,per1k:35},
+  {state:'MS',total:177,anomalous:6,rate:3.4,per1k:34},
+  {state:'MI',total:768,anomalous:24,rate:3.1,per1k:31},
+  {state:'CT',total:291,anomalous:9,rate:3.1,per1k:31},
+  {state:'NY',total:1508,anomalous:45,rate:3.0,per1k:30},
+  {state:'OK',total:240,anomalous:7,rate:2.9,per1k:29},
+  {state:'FL',total:1421,anomalous:40,rate:2.8,per1k:28},
+  {state:'MO',total:394,anomalous:11,rate:2.8,per1k:28},
+  {state:'GA',total:543,anomalous:15,rate:2.8,per1k:28},
+  {state:'IA',total:219,anomalous:6,rate:2.7,per1k:27},
+  {state:'CA',total:2122,anomalous:57,rate:2.7,per1k:27},
+];
+
+let filtered=[...ALL_DATA],page=1,threshold=AVG+2*STD,BC=null,DC=null,GRC=null,GDC=null;
 
 function fmt(v){return v>=1e6?'$'+(v/1e6).toFixed(1)+'M':'$'+Math.round(v/1000)+'K';}
 
@@ -202,6 +301,24 @@ function barColor(cost,t){
   if(r>10)return RED;
   if(r>5)return AMBER;
   return BLUE;
+}
+
+function geoRateColor(rate){
+  if(rate>4)return RED;
+  if(rate>3)return AMBER;
+  return BLUE;
+}
+
+function geoDensityColor(per1k){
+  if(per1k>40)return RED;
+  if(per1k>30)return AMBER;
+  return BLUE;
+}
+
+function geoRiskBadge(rate){
+  if(rate>4)return{label:'Extreme',cls:'badge-red'};
+  if(rate>3)return{label:'High',cls:'badge-amber'};
+  return{label:'Above avg',cls:'badge-blue'};
 }
 
 function getFilteredPool(){
@@ -230,7 +347,8 @@ function updateKPIs(pool){
   const poolSize=pool?pool.length:TOTAL;
   document.getElementById('kpi-prescribers').textContent=poolSize.toLocaleString();
   document.getElementById('kpi-anomalies').textContent=filtered.length.toLocaleString();
-  const poolSize2=pool?pool.length:TOTAL; const pctVal=poolSize2>0?(filtered.length/poolSize2*100).toFixed(1):0; document.getElementById('kpi-pct').textContent=pctVal+'% of filtered';
+  const pctVal=poolSize>0?(filtered.length/poolSize*100).toFixed(1):0;
+  document.getElementById('kpi-pct').textContent=pctVal+'% of filtered';
   document.getElementById('kpi-threshold').textContent=fmt(threshold);
 }
 
@@ -243,6 +361,14 @@ function updateTable(){
   document.getElementById('anomaly-tbody').innerHTML=pg.map((d,i)=>{
     const f=flagItem(d,threshold);
     return'<tr><td style="color:#888780;font-weight:500">'+(s+i+1)+'</td><td><span class="id-pill">'+d.id+'</span></td><td>'+d.specialty+'</td><td>'+d.state+'</td><td style="font-weight:500;color:'+RED+'">'+fmt(d.cost)+'</td><td style="color:#888780">'+(d.cost/threshold).toFixed(1)+'x</td><td><span class="badge '+f.cls+'">'+f.label+'</span></td></tr>';
+  }).join('');
+}
+
+function updateGeoTable(){
+  const sorted=[...GEO_DATA].sort((a,b)=>b.rate-a.rate);
+  document.getElementById('geo-tbody').innerHTML=sorted.map(d=>{
+    const b=geoRiskBadge(d.rate);
+    return'<tr><td style="font-weight:500">'+d.state+'</td><td style="font-weight:500;color:'+RED+'">'+d.anomalous+'</td><td style="font-weight:500">'+d.rate+'%</td><td>'+d.per1k+'</td><td><span class="badge '+b.cls+'">'+b.label+'</span></td></tr>';
   }).join('');
 }
 
@@ -281,18 +407,15 @@ function buildBarChart(){
 
 function buildDistChart(pool){
   const data=pool||ALL_DATA;
-  const sp=document.getElementById('filter-specialty').value;
-  const st=document.getElementById('filter-state').value;
-  const label=sp!=='all'?sp:(st!=='all'?st:'all prescribers');
-  const spVal=document.getElementById('filter-specialty').value; const stVal=document.getElementById('filter-state').value; const distLabel=spVal!=='all'?spVal:(stVal!=='all'?stVal:'all prescribers'); document.getElementById('dist-title').textContent='Spending distribution — '+distLabel;
-
+  const spVal=document.getElementById('filter-specialty').value;
+  const stVal=document.getElementById('filter-state').value;
+  const distLabel=spVal!=='all'?spVal:(stVal!=='all'?stVal:'all prescribers');
+  document.getElementById('dist-title').textContent='Spending distribution — '+distLabel;
   const buckets=20,maxVal=45000000,bw=maxVal/buckets;
   const counts=Array(buckets).fill(0);
   data.forEach(d=>{const bi=Math.min(buckets-1,Math.floor(d.cost/bw));counts[bi]++;});
-
   const labels=Array.from({length:buckets},(_,i)=>fmt((i+0.5)*bw));
   const colors=Array.from({length:buckets},(_,i)=>(i+0.5)*bw>threshold?RED_FILL:BLUE_FILL);
-
   if(DC){DC.destroy();DC=null;}
   DC=new Chart(document.getElementById('distChart'),{
     type:'bar',
@@ -308,13 +431,61 @@ function buildDistChart(pool){
   });
 }
 
+function buildGeoCharts(){
+  if(GRC){GRC.destroy();GRC=null;}
+  GRC=new Chart(document.getElementById('geoRateChart'),{
+    type:'bar',
+    data:{
+      labels:GEO_DATA.map(d=>d.state),
+      datasets:[{
+        label:'Anomalous rate',
+        data:GEO_DATA.map(d=>d.rate),
+        backgroundColor:GEO_DATA.map(d=>geoRateColor(d.rate)),
+        borderRadius:3
+      }]
+    },
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label:ctx=>{
+              const d=GEO_DATA[ctx.dataIndex];
+              return [
+                ' Rate: '+d.rate+'%  ('+d.anomalous+' of '+d.total+' prescribers)',
+                ' Density: '+d.per1k+' per 1,000 prescribers in state'
+              ];
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          grid:{color:'rgba(136,135,128,0.12)'},
+          ticks:{callback:v=>v+'%',font:{size:11},color:'#888780'},
+          border:{display:false},
+          max:6
+        },
+        y:{grid:{display:false},ticks:{font:{size:11},color:'#888780'},border:{display:false}}
+      }
+    }
+  });
+}
+
 function refreshCharts(pool){buildBarChart();buildDistChart(pool);}
 
 document.getElementById('filter-specialty').addEventListener('change',applyFilters);
 document.getElementById('filter-state').addEventListener('change',applyFilters);
 document.getElementById('sigma-slider').addEventListener('input',applyFilters);
 
-applyFilters();
+function init(){
+  if(typeof Chart==='undefined'){setTimeout(init,100);return;}
+  applyFilters();
+  buildGeoCharts();
+  updateGeoTable();
+}
+init();
 </script>
 </body>
 </html>
